@@ -1,0 +1,32 @@
+# ============================================================
+# Swag Labs 结账流程 — 测试数据集
+# ============================================================
+
+# 有效收货信息
+valid_shipping:
+  first_name: "Jie"
+  last_name: "Chao"
+  postal_code: "442000"
+
+# 异常收货信息（边界值 / 负向测试）
+shipping_edge_cases:
+  - test_id: "EDGE-001"
+    description: "空名字 → 预期 Error: First Name is required"
+    first_name: ""
+    last_name: "Chao"
+    postal_code: "442000"
+    expected_error: "Error: First Name is required"
+
+  - test_id: "EDGE-002"
+    description: "空姓氏 → 预期 Error: Last Name is required"
+    first_name: "Jie"
+    last_name: ""
+    postal_code: "442000"
+    expected_error: "Error: Last Name is required"
+
+  - test_id: "EDGE-003"
+    description: "空邮编 → 预期 Error: Postal Code is required"
+    first_name: "Jie"
+    last_name: "Chao"
+    postal_code: ""
+    expected_error: "Error: Postal Code is required"

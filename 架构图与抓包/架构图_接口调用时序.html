@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Swag Labs — 关键接口调用时序图（技术层）</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  body { font-family: 'Microsoft YaHei', sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f8f9fa; }
+  h1 { color: #1a3a5c; border-left: 4px solid #dc2626; padding-left: 12px; }
+  h2 { color: #333; margin-top: 25px; }
+  .diagram-box { background: #fff; border-radius: 8px; padding: 20px; margin: 15px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow-x: auto; }
+  .note { background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 12px 16px; margin: 15px 0; font-size: 13px; }
+  .note strong { color: #856404; }
+  .code-block { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 6px; font-family: Consolas, monospace; font-size: 12px; overflow-x: auto; }
+  .code-block .kw { color: #569cd6; }
+  .code-block .str { color: #ce9178; }
+  .code-block .cmt { color: #6a9955; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; margin: 10px 0; }
+  th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; }
+  th { background: #e8edf3; }
+</style>
+</head>
+<body>
+
+<h1>图 2：关键接口调用时序图（技术层）</h1>
+<p>测试对象：Swag Labs (saucedemo.com) | 抓包工具：Chrome DevTools Network 面板 | 日期：2026.06</p>
+
+<div class="diagram-box">
+<h2>正常流程：登录 → 浏览 → 加购 → 结账</h2>
+<div class="mermaid">
+sequenceDiagram
+    participant Browser as 🌐 Browser (Edge 149)
+    participant Server as 🖥️ saucedemo.com<br/>(静态资源服务器)
+    participant Cookie as 🍪 Cookie Store
+    participant Cart as 🛒 Cart State<br/>(JS 内存)
+
+    Note over Browser,Server: ===== 1. 登录认证 =====
+
+    Browser->>Server: GET / (加载登录页)
+    Server-->>Browser: index.html + login.css + JS
+    Note right of Browser: 页面渲染完毕<br/>显示登录表单
+
+    Browser->>Server: POST (模拟) 登录请求<br/>username: standard_user<br/>password: secret_sauce
+    Server-->>Browser: 验证通过 → Set-Cookie: session-username=standard_user
+    Browser->>Cookie: 存储 session-username
+
+    Note over Browser,Server: ===== 2. 商品列表 =====
+
+    Browser->>Server: GET /inventory.html<br/>Cookie: session-username=standard_user
+    Server-->>Browser: ✅ inventory.html + 6件商品数据
+    Note right of Browser: 商品列表渲染<br/>6件商品: Backpack/Bike Light/<br/>Bolt T-Shirt/Fleece Jacket/<br/>Onesie/Red T-Shirt
+
+    Note over Browser,Server: ===== 3. 商品详情 =====
+
+    Browser->>Server: GET /inventory-item.html?id=4
+    Server-->>Browser: ✅ 商品详情页 (Sauce Labs Onesie)
+    Note right of Browser: 商品名/描述/价格/$7.99<br/>Add to cart 按钮
+
+    Note over Browser,Server: ===== 4. 加入购物车 =====
+
+    Browser->>Cart: JS: cart.push({id:4, name:"Onesie", price:7.99})
+    Cart-->>Browser: cart_count = 1
+    Note right of Browser: 按钮变为 Remove<br/>购物车 Badge 显示 1
+
+    Note over Browser,Server: ===== 5. 进入购物车 =====
+
+    Browser->>Server: GET /cart.html
+    Server-->>Browser: ✅ cart.html
+    Browser->>Cart: JS: 读取 cart[] 渲染列表
+    Cart-->>Browser: 1件商品, 总价 $7.99
+
+    Note over Browser,Server: ===== 6. 结账流程 =====
+
+    Browser->>Server: GET /checkout-step-one.html
+    Server-->>Browser: ✅ 收货信息表单
+    Browser->>Browser: 填写: John / Doe / 12345
+
+    Browser->>Server: GET /checkout-step-two.html
+    Server-->>Browser: ✅ 订单确认页
+    Note right of Browser: 商品明细 + 总价 + Tax<br/>Payment Info: SauceCard
+
+    Browser->>Server: GET /checkout-complete.html
+    Server-->>Browser: ✅ THANK YOU FOR YOUR ORDER
+    Browser->>Cart: JS: 清空 cart[]
+    Note right of Browser: 购物车 Badge 消失<br/>订单流程完成
+</div>
+</div>
+
+<div class="diagram-box">
+<h2>异常流程：Token 失效 / 越权访问 / 输入校验失败</h2>
+<div class="mermaid">
+sequenceDiagram
+    participant Browser as 🌐 Browser
+    participant Server as 🖥️ saucedemo.com
+
+    Note over Browser,Server: ===== 异常场景 1：未登录直接访问受保护页面 =====
+
+    rect rgb(255, 230, 230)
+        Browser->>Server: GET /inventory.html<br/>(无 Cookie)
+        Server-->>Browser: ❌ 302 Redirect → /
+        Note right of Browser: 跳转回登录页<br/>无法绕过认证
+    end
+
+    Note over Browser,Server: ===== 异常场景 2：登录后 Cookie 失效 =====
+
+    rect rgb(255, 230, 230)
+        Browser->>Browser: 手动清除 Cookie: session-username
+        Browser->>Server: GET /cart.html<br/>(Cookie 已清除)
+        Server-->>Browser: ❌ 302 Redirect → /
+        Note right of Browser: 表现同"未登录"<br/>网站无 Token 刷新机制
+    end
+
+    Note over Browser,Server: ===== 异常场景 3：结账信息校验失败 =====
+
+    rect rgb(255, 230, 230)
+        Browser->>Server: GET /checkout-step-one.html
+        Server-->>Browser: ✅ 表单页面
+        Browser->>Browser: FirstName: [空]<br/>点击 Continue
+        Browser-->>Browser: ❌ Error: First Name is required
+        Browser->>Browser: LastName: [空]<br/>点击 Continue
+        Browser-->>Browser: ❌ Error: Last Name is required
+        Browser->>Browser: ZipCode: [空]<br/>点击 Continue
+        Browser-->>Browser: ❌ Error: Postal Code is required
+        Note right of Browser: 客户端 JS 校验<br/>不提交到服务端
+    end
+
+    Note over Browser,Server: ===== 异常场景 4：账户锁定 =====
+
+    rect rgb(255, 230, 230)
+        Browser->>Server: POST 登录<br/>locked_out_user / secret_sauce
+        Server-->>Browser: ❌ Epic sadface:<br/>Sorry, this user has been locked out.
+        Note right of Browser: 账户锁定提示<br/>无法进入商品页
+    end
+</div>
+</div>
+
+<h2>📋 接口清单（基于 DevTools Network 抓包）</h2>
+<table>
+<tr><th>#</th><th>请求</th><th>方法</th><th>URL</th><th>请求参数</th><th>响应</th><th>异常响应</th></tr>
+<tr><td>1</td><td>加载登录页</td><td>GET</td><td><code>/</code></td><td>—</td><td>200 + index.html</td><td>—</td></tr>
+<tr><td>2</td><td>登录验证</td><td>客户端</td><td><code>/</code> → Cookie</td><td>username, password</td><td>302 → /inventory.html</td><td>错误提示 / 锁定提示</td></tr>
+<tr><td>3</td><td>商品列表</td><td>GET</td><td><code>/inventory.html</code></td><td>Cookie: session-username</td><td>200 + 6件商品</td><td>302 → / (无Cookie)</td></tr>
+<tr><td>4</td><td>商品详情</td><td>GET</td><td><code>/inventory-item.html?id=X</code></td><td>id=0~5</td><td>200 + 商品详情</td><td>异常id → 页面空白</td></tr>
+<tr><td>5</td><td>加购操作</td><td>JS</td><td>客户端内存</td><td>item_id</td><td>cart[] 更新</td><td>—</td></tr>
+<tr><td>6</td><td>购物车页</td><td>GET</td><td><code>/cart.html</code></td><td>Cookie</td><td>200 + cart.html</td><td>302 → / (无Cookie)</td></tr>
+<tr><td>7</td><td>收货信息</td><td>GET</td><td><code>/checkout-step-one.html</code></td><td>Cookie</td><td>200 + 表单</td><td>302 → / (无Cookie)</td></tr>
+<tr><td>8</td><td>信息校验</td><td>JS</td><td>客户端验证</td><td>FirstName, LastName, ZipCode</td><td>通过 → step-two</td><td>Error 提示</td></tr>
+<tr><td>9</td><td>订单确认</td><td>GET</td><td><code>/checkout-step-two.html</code></td><td>Cookie</td><td>200 + 订单汇总</td><td>302 → / (无Cookie)</td></tr>
+<tr><td>10</td><td>完成订单</td><td>GET</td><td><code>/checkout-complete.html</code></td><td>Cookie</td><td>200 + 感谢页 + 清空购物车</td><td>302 → / (无Cookie)</td></tr>
+</table>
+
+<h2>🔍 抓包验证步骤（面试时展示用）</h2>
+<div class="code-block">
+<span class="cmt"># Step 1: 打开 DevTools</span>
+F12 → Network 标签 → 勾选 <span class="str">"Preserve log"</span>
+
+<span class="cmt"># Step 2: 完整走一遍流程</span>
+登录(standard_user) → 浏览商品 → 查看详情 → 加购 → 结账 → Finish
+
+<span class="cmt"># Step 3: 筛选关键请求</span>
+Network 面板搜索框输入: <span class="str">.html</span>  → 查看所有页面请求
+Network 面板搜索框输入: <span class="str">inventory</span> → 查看商品相关
+
+<span class="cmt"># Step 4: 验证 Cookie 机制</span>
+点击任一请求 → Cookies 标签 → 确认 <span class="str">session-username</span> 存在
+清除 Cookie → 刷新 → 确认被重定向到登录页
+
+<span class="cmt"># Step 5: 导出 HAR 文件（面试证据）</span>
+Network 面板 → 右键 → <span class="str">Save all as HAR with content</span>
+<span class="cmt"># 保存到 docs/network_trace.har，放入 GitHub 仓库</span>
+</div>
+
+<div class="note">
+<strong>🔬 微创新要点（面试时主动展示）：</strong><br>
+1. <strong>架构图不是画出来的，是"抓"出来的</strong>——每个接口路径、Cookie 名称、页面 URL 都来自 DevTools 实际抓包，不是凭想象画<br>
+2. <strong>异常路径不是臆想的</strong>——清除 Cookie 后重试、未登录直接访问 URL、输入空值提交，每个异常场景都有实际验证<br>
+3. <strong>技术发现</strong>：Swag Labs 的"认证"仅依赖一个 Cookie（session-username），无 Token 过期机制、无 HttpOnly 标记——这是一个安全缺陷，已记录为 Bug<br>
+4. <strong>HAR 文件</strong>已导出保存至 <code>docs/network_trace.har</code>，面试时可现场导入 DevTools 回放完整请求链路
+</div>
+
+</body>
+</html>

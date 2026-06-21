@@ -1,0 +1,15 @@
+# Python 环境与缓存
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# 测试动态产物（千万别把几十MB的报告和截图传上去）
+automation/reports/*.html
+automation/reports/screenshots/
+*.log
+
+# 系统垃圾文件
+.DS_Store
+Thumbs.db

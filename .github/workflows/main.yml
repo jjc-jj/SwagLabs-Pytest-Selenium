@@ -1,0 +1,129 @@
+# ================================================================
+# Swag Labs 自动化测试 — CI/CD 流水线 (GitHub Actions)
+#
+# 触发条件: push 到 main/master 分支 或 Pull Request
+# 运行环境: ubuntu-latest + Python 3.12 + Chrome (Headless)
+# 产出物:   Allure 报告 + Pytest HTML 报告
+# ================================================================
+
+name: Swag Labs 自动化测试 CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:     # 支持手动触发
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # ── 1. 检出代码 ──
+      - name: 📥 Checkout 代码
+        uses: actions/checkout@v4
+
+      # ── 2. 设置 Python ──
+      - name: 🐍 设置 Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      # ── 3. 安装依赖 ──
+      - name: 📦 安装 Python 依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # ── 4. CI 环境配置（强制 Headless + Chrome） ──
+      - name: 🔧 配置 CI 环境
+        run: |
+          cd automation
+
+          # 切换为 Chrome（Ubuntu 默认无 Edge）
+          python -c "
+          import yaml
+          with open('config/config.yaml', 'r', encoding='utf-8') as f:
+              cfg = yaml.safe_load(f)
+          cfg['browser']['type'] = 'chrome'
+          cfg['browser']['headless'] = True
+          cfg['timeout']['page_load'] = 60
+          with open('config/config.yaml', 'w', encoding='utf-8') as f:
+              yaml.dump(cfg, f, allow_unicode=True, default_flow_style=False)
+          print('CI 配置已生效: browser=chrome, headless=True, page_load=60s')
+          "
+
+      # ── 5. 安装 Allure 命令行工具 ──
+      - name: 📊 安装 Allure CLI
+        run: |
+          wget -q https://github.com/allure-framework/allure2/releases/download/2.33.0/allure-2.33.0.tgz
+          tar -xzf allure-2.33.0.tgz
+          echo "$(pwd)/allure-2.33.0/bin" >> $GITHUB_PATH
+
+      # ── 6. 运行测试 ──
+      - name: 🧪 运行 Pytest
+        run: |
+          cd automation
+          python -m pytest testcases/ \
+            -v \
+            --tb=short \
+            --strict-markers \
+            --html=reports/report.html \
+            --self-contained-html \
+            --alluredir=reports/allure-results \
+            --clean-alluredir \
+            --timeout=300 \
+            --reruns=1 \
+            --reruns-delay=3 \
+            -m "not slow" \
+            2>&1 | tee reports/pytest.log
+        continue-on-error: true   # 测试失败也生成报告
+
+      # ── 7. 生成 Allure 报告 ──
+      - name: 📈 生成 Allure 报告
+        if: always()
+        run: |
+          cd automation
+          allure generate reports/allure-results \
+            -o reports/allure-report \
+            --clean
+
+      # ── 8. 上传测试产物 ──
+      - name: 📤 上传 Allure 报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: automation/reports/allure-report/
+          retention-days: 30
+
+      - name: 📤 上传 HTML 报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-html-report
+          path: automation/reports/report.html
+          retention-days: 30
+
+      - name: 📤 上传测试日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs
+          path: |
+            automation/logs/
+            automation/reports/pytest.log
+          retention-days: 30
+
+      # ── 9. 发布 Allure 到 GitHub Pages ──
+      - name: 🚀 部署 Allure 到 Pages
+        if: always()
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: automation/reports/allure-report
+          destination_dir: allure-report
+          keep_files: true

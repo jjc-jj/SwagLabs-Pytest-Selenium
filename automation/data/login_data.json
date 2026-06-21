@@ -1,0 +1,30 @@
+[
+    {
+        "test_id": "ATC-05-001",
+        "description": "locked_out_user 登录被拒绝",
+        "username": "locked_out_user",
+        "password": "secret_sauce",
+        "expected_error": "Epic sadface: Sorry, this user has been locked out."
+    },
+    {
+        "test_id": "ATC-05-002",
+        "description": "空用户名登录",
+        "username": "",
+        "password": "secret_sauce",
+        "expected_error": "Epic sadface: Username is required"
+    },
+    {
+        "test_id": "ATC-05-003",
+        "description": "空密码登录",
+        "username": "standard_user",
+        "password": "",
+        "expected_error": "Epic sadface: Password is required"
+    },
+    {
+        "test_id": "ATC-05-004",
+        "description": "错误密码登录",
+        "username": "standard_user",
+        "password": "wrong_password",
+        "expected_error": "Epic sadface: Username and password do not match any user in this service"
+    }
+]

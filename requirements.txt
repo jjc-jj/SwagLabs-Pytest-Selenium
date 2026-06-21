@@ -1,0 +1,31 @@
+# ================================================================
+# Swag Labs 自动化测试 — 项目依赖
+# 安装: pip install -r requirements.txt
+# ================================================================
+
+# ── 浏览器自动化 ──
+selenium>=4.45.0
+
+# ── 测试框架 ──
+pytest>=9.0.0
+pytest-html>=4.0.0          # HTML 报告
+pytest-metadata>=3.0.0       # 环境元数据（自动注入）
+pytest-rerunfailures>=16.0   # 失败重跑
+
+# ── Allure 报告 ──
+allure-pytest>=2.16.0
+
+# ── 配置 & 数据 ──
+PyYAML>=6.0                  # YAML 配置解析
+
+# ── Excel 测试资产（用例管理） ──
+openpyxl>=3.1.0
+
+# ── Mock & API（阶段五预留） ──
+responses>=0.26.0            # HTTP Mock
+
+# ── Web 框架（数据库断言本地环境） ──
+Django>=6.0.0
+
+# ── Driver 自动管理（CI 环境推荐） ──
+webdriver-manager>=4.1.0

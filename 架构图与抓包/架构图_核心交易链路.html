@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Swag Labs — 核心交易链路图（业务层）</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  body { font-family: 'Microsoft YaHei', sans-serif; max-width: 1400px; margin: 0 auto; padding: 20px; background: #f8f9fa; }
+  h1 { color: #1a3a5c; border-left: 4px solid #2563eb; padding-left: 12px; }
+  h2 { color: #333; margin-top: 30px; }
+  .diagram-box { background: #fff; border-radius: 8px; padding: 20px; margin: 15px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .legend { display: flex; gap: 20px; flex-wrap: wrap; margin: 10px 0; font-size: 13px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+  .note { background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 12px 16px; margin: 15px 0; font-size: 13px; }
+  .note strong { color: #856404; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; margin: 10px 0; }
+  th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; }
+  th { background: #e8edf3; }
+  tr:hover { background: #f5f7fa; }
+  .highlight-red { background: #ffe0e0; }
+</style>
+</head>
+<body>
+
+<h1>图 1：核心交易链路图（业务层）</h1>
+<p>测试对象：Swag Labs (saucedemo.com) | 分析工具：浏览器 DevTools Network 面板 | 日期：2026.06</p>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#2563eb;"></div> 正常流程</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#dc2626;"></div> 异常/边界路径</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f59e0b;"></div> 关键数据传递</div>
+</div>
+
+<div class="diagram-box">
+<div class="mermaid">
+flowchart TD
+    %% ===== 节点定义 =====
+    LOGIN["🔐 用户登录<br/>GET /<br/><small>页面: saucedemo.com</small>"]
+    AUTH{"认证验证<br/><small>客户端验证用户名+密码</small>"}
+    FAIL["❌ 登录失败<br/><small>错误提示 + 清空密码框</small>"]
+    INVENTORY["📦 商品列表页<br/>GET /inventory.html<br/><small>显示6件商品</small>"]
+    SORT["🔀 商品排序<br/><small>Name A-Z/Z-A<br/>Price Low/High</small>"]
+    DETAIL["🔍 商品详情页<br/>GET /inventory-item.html?id=X<br/><small>名称/描述/价格/图片</small>"]
+    ADD_CART["🛒 加入购物车<br/><small>按钮: Add to cart → Remove</small>"]
+    CART["🛒 购物车页<br/>GET /cart.html<br/><small>商品列表 + 总价</small>"]
+    CHECKOUT1["📋 填写收货信息<br/>GET /checkout-step-one.html<br/><small>First Name / Last Name / Zip</small>"]
+    VALIDATE{"信息校验"}
+    CHECKOUT2["📋 订单确认页<br/>GET /checkout-step-two.html<br/><small>商品明细 + 总价 + 税</small>"]
+    FINISH["✅ 订单完成<br/>GET /checkout-complete.html<br/><small>THANK YOU FOR YOUR ORDER</small>"]
+
+    SIDEBAR["☰ 侧边栏菜单<br/><small>All Items / About<br/>Logout / Reset</small>"]
+    LOGOUT["🚪 登出<br/><small>返回登录页</small>"]
+
+    %% ===== 异常路径节点 =====
+    ERR_401["⚠️ Token失效 401<br/><small>直接URL访问需重新登录</small>"]
+    ERR_EMPTY["⚠️ 必填项为空<br/><small>Error: First Name is required</small>"]
+    ERR_LOCKED["⚠️ 账户锁定<br/><small>locked_out_user</small>"]
+
+    %% ===== 数据传递标注 =====
+    DATA_TOKEN["🔑 Session Token<br/><small>登录后写入Cookie</small>"]
+    DATA_ITEM["🆔 商品ID (0-5)<br/><small>URL参数 ?id=X</small>"]
+    DATA_CART["🛒 购物车状态<br/><small>客户端数组维护</small>"]
+    DATA_ORDER["📝 订单信息<br/><small>收货人+商品+总价</small>"]
+
+    %% ===== 正常流程连接 =====
+    LOGIN --> AUTH
+    AUTH -->|"✅ 认证通过<br/><small>standard_user / secret_sauce</small>"| INVENTORY
+    AUTH -->|"❌ 认证失败"| FAIL
+    AUTH -->|"⚠️ 账户锁定"| ERR_LOCKED
+    FAIL -.->|"重新输入"| LOGIN
+
+    INVENTORY -->|"选择排序方式"| SORT
+    SORT -->|"排序结果"| INVENTORY
+    INVENTORY -->|"点击商品"| DETAIL
+    DETAIL -->|"Back to products"| INVENTORY
+    DETAIL -->|"Add to cart"| ADD_CART
+    INVENTORY -->|"列表页 Add to cart"| ADD_CART
+    ADD_CART -->|"购物车图标"| CART
+    CART -->|"Continue Shopping"| INVENTORY
+    CART -->|"Checkout"| CHECKOUT1
+
+    CHECKOUT1 --> VALIDATE
+    VALIDATE -->|"✅ 信息完整"| CHECKOUT2
+    VALIDATE -->|"❌ 必填为空"| ERR_EMPTY
+    ERR_EMPTY -.->|"补充信息"| CHECKOUT1
+
+    CHECKOUT2 -->|"Finish"| FINISH
+    CHECKOUT2 -->|"Cancel"| INVENTORY
+
+    INVENTORY -->|"☰ 汉堡菜单"| SIDEBAR
+    SIDEBAR -->|"All Items"| INVENTORY
+    SIDEBAR -->|"Logout"| LOGOUT
+    SIDEBAR -->|"Reset App State"| INVENTORY
+    LOGOUT --> LOGIN
+
+    %% ===== 异常路径 =====
+    ERR_401 -.->|"跳转登录页"| LOGIN
+
+    %% ===== 数据传递 =====
+    DATA_TOKEN -.->|"携带"| INVENTORY
+    DATA_TOKEN -.->|"携带"| DETAIL
+    DATA_TOKEN -.->|"携带"| CART
+    DATA_ITEM -.->|"传递"| DETAIL
+    DATA_CART -.->|"传递"| CART
+    DATA_CART -.->|"传递"| CHECKOUT2
+    DATA_ORDER -.->|"生成"| FINISH
+
+    %% ===== 样式 =====
+    classDef normal fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e3a5f
+    classDef error fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#7f1d1d
+    classDef decision fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#78350f
+    classDef data fill:#e0e7ff,stroke:#6366f1,stroke-width:1px,stroke-dasharray: 5 5,color:#3730a3
+
+    class LOGIN,INVENTORY,SORT,DETAIL,ADD_CART,CART,CHECKOUT1,CHECKOUT2,FINISH,SIDEBAR,LOGOUT normal
+    class FAIL,ERR_401,ERR_EMPTY,ERR_LOCKED error
+    class AUTH,VALIDATE decision
+    class DATA_TOKEN,DATA_ITEM,DATA_CART,DATA_ORDER data
+</div>
+</div>
+
+<h2>📋 关键 API 接口与页面映射表</h2>
+<table>
+<tr><th>步骤</th><th>页面 URL</th><th>关键 API / 操作</th><th>传递数据</th><th>异常场景</th></tr>
+<tr><td>1. 登录</td><td><code>/</code> (index.html)</td><td>客户端验证 → 写入 Session Cookie</td><td>username, password → session_token</td><td class="highlight-red">账户锁定 / 密码错误 / 空输入</td></tr>
+<tr><td>2. 商品列表</td><td><code>/inventory.html</code></td><td>页面直出 6 件商品数据</td><td>session_token (Cookie)</td><td class="highlight-red">未登录直接访问 → 跳转登录页</td></tr>
+<tr><td>3. 商品排序</td><td><code>/inventory.html</code></td><td>前端 JS 排序 (A-Z / Z-A / Price)</td><td>排序方式参数</td><td class="highlight-red">刷新后排序状态保持</td></tr>
+<tr><td>4. 商品详情</td><td><code>/inventory-item.html?id=X</code></td><td>URL 参数传递商品 ID (0-5)</td><td>item_id</td><td class="highlight-red">非法 ID → 页面异常或空白</td></tr>
+<tr><td>5. 加购/移除</td><td>列表页 或 详情页</td><td>前端 JS 操作购物车数组</td><td>item_id, action (add/remove)</td><td class="highlight-red">快速多次点击 → 防重复</td></tr>
+<tr><td>6. 购物车</td><td><code>/cart.html</code></td><td>读取客户端购物车状态</td><td>cart_items[]</td><td class="highlight-red">空购物车 → 空状态提示</td></tr>
+<tr><td>7. 填写信息</td><td><code>/checkout-step-one.html</code></td><td>表单验证 (客户端)</td><td>FirstName, LastName, ZipCode</td><td class="highlight-red">必填为空 / ZipCode 非法</td></tr>
+<tr><td>8. 确认订单</td><td><code>/checkout-step-two.html</code></td><td>展示订单汇总</td><td>商品+总价+税+收货信息</td><td class="highlight-red">总价计算错误</td></tr>
+<tr><td>9. 完成</td><td><code>/checkout-complete.html</code></td><td>清空购物车 + 显示确认</td><td>order_confirmation</td><td class="highlight-red">回退按钮 → 购物车已清空</td></tr>
+</table>
+
+<div class="note">
+<strong>⚠️ 重要说明（面试时主动提及）：</strong><br>
+Swag Labs 为纯前端 Demo 站点，无真实后端 API。登录认证、购物车管理、订单处理均为客户端 JavaScript 实现。<br>
+这意味着：<br>
+• "API 接口"实际上是页面加载 + 前端逻辑，而非独立的 RESTful 端点<br>
+• Session Token 存储在 Cookie 中（名为 <code>session-username</code>），用于页面访问控制<br>
+• 越权测试的核心：不登录直接访问 <code>/inventory.html</code>、<code>/cart.html</code>、<code>/checkout-step-one.html</code><br>
+<strong>面试话术：</strong>"我在测试前先通过 DevTools 摸清了整个技术实现——发现这是一个纯前端应用，认证靠 Cookie、购物车靠本地状态。这反而让我的安全测试更有针对性，比如验证了未登录状态下直接 URL 访问是否会被拦截。"
+</div>
+
+</body>
+</html>

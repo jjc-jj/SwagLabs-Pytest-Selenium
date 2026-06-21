@@ -1,0 +1,94 @@
+# ============================================================
+# Swag Labs 自动化测试 — 全局配置文件
+# 约束：所有环境相关值必须从此文件读取，禁止代码内硬编码
+# ============================================================
+
+# --- 环境 ---
+environment:
+  base_url: "https://www.saucedemo.com/"
+  api_url: "https://www.saucedemo.com/"
+
+# --- 测试账号 ---
+accounts:
+  standard_user:
+    username: "standard_user"
+    password: "secret_sauce"
+    role: "standard"
+  locked_out_user:
+    username: "locked_out_user"
+    password: "secret_sauce"
+    role: "locked"
+  problem_user:
+    username: "problem_user"
+    password: "secret_sauce"
+    role: "problem"
+  performance_glitch_user:
+    username: "performance_glitch_user"
+    password: "secret_sauce"
+    role: "performance_glitch"
+  error_user:
+    username: "error_user"
+    password: "secret_sauce"
+    role: "error"
+  visual_user:
+    username: "visual_user"
+    password: "secret_sauce"
+    role: "visual"
+
+# --- 浏览器 ---
+browser:
+  type: "edge"             # chrome | edge
+  headless: false           # true 则无头运行
+  driver_path: ""           # 留空则从 PATH 自动获取，或填写绝对路径
+
+# --- 超时时间（秒）---
+# page_load 和 script 已设硬性兜底（driver_factory 中强制 <=15s/<=10s）
+timeout:
+  implicit_wait: 10
+  explicit_wait: 15
+  page_load: 30                # eager 策略下 DOM 应 <5s，30s 为跨境极端兜底
+  script: 10                   # JS 执行硬性上限
+
+# --- 代理（企业内网环境）---
+proxy:
+  enabled: false               # true 则启用代理
+  http: ""                     # e.g. "http://proxy.company.com:8080"
+  https: ""                    # e.g. "http://proxy.company.com:8080"
+  bypass: ""                   # e.g. "localhost,127.0.0.1,*.company.com"
+
+# --- 加载策略 ---
+loading:
+  disable_images: false        # 默认保留图片（真实用户体验）。纯功能冒烟时可临时改为 true 提速 3-5x
+
+# --- 浏览器选项 ---
+options:
+  disable_gpu: true
+  ignore_certificate_errors: true
+  window_maximize: true
+  disable_extensions: true
+  disable_infobars: true
+  incognito: false
+  sandbox: true             # Linux 环境建议开启
+  remote_debugging_port: 0  # 0 = 随机端口
+
+# --- 日志 ---
+logging:
+  level: "INFO"                           # DEBUG | INFO | WARNING | ERROR
+  format: "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
+  date_format: "%Y-%m-%d %H:%M:%S"
+  file_dir: "logs"                        # 相对于 automation/ 根目录
+  when: "midnight"                        # 按天切割
+  interval: 1
+  backup_count: 30                        # 保留 30 天
+  console_output: true
+
+# --- 截图 ---
+screenshot:
+  on_failure: true
+  save_path: "reports/screenshots"
+  format: "png"
+
+# --- 重试 ---
+retry:
+  max_attempts: 2
+  delay: 1                               # 秒
