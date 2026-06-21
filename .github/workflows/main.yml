@@ -15,6 +15,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch:     # 支持手动触发
 
+permissions:
+  contents: write   # 允许 peaceiris 推送 gh-pages 分支
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -75,7 +78,6 @@ jobs:
             --self-contained-html \
             --alluredir=reports/allure-results \
             --clean-alluredir \
-            --timeout=300 \
             --reruns=1 \
             --reruns-delay=3 \
             -m "not slow" \
