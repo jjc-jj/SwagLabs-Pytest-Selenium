@@ -129,3 +129,4 @@ jobs:
           publish_dir: automation/reports/allure-report
           destination_dir: allure-report
           keep_files: true
+          force_orphan: true
