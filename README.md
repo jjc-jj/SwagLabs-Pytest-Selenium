@@ -1,4 +1,4 @@
-# 🛒 Swag Labs 电商平台 — Selenium 自动化测试框架
+# 🛒 精品零售Web系统 电商平台 — Selenium 自动化测试框架
 
 > **企业级 UI 自动化测试解决方案** | Python 3.12+ | Selenium 4 | Pytest | Allure | POM
 
@@ -37,7 +37,7 @@
 ## 📁 目录架构
 
 ```
-SwagLabs_电商平台功能测试与自动化测试实战/
+精品零售Web系统E2E自动化测试与回归体系建设/
 ├── README.md                       ← 本文件
 ├── requirements.txt                ← Python 依赖清单
 ├── CLAUDE.md                       ← 项目记忆文件（自动加载）
@@ -91,7 +91,7 @@ SwagLabs_电商平台功能测试与自动化测试实战/
 
 ```bash
 # 1. 克隆项目（或解压到本地）
-cd SwagLabs_电商平台功能测试与自动化测试实战
+cd 精品零售Web系统E2E自动化测试与回归体系建设
 
 # 2. 创建虚拟环境（推荐）
 python -m venv venv

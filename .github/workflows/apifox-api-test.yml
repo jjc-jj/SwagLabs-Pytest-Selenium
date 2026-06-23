@@ -1,0 +1,228 @@
+# ============================================================
+# .github/workflows/apifox-api-test.yml
+# Swag Labs — Apifox 接口测试 CI/CD 流水线
+#
+# 触发条件:
+#   - Push 到 main/develop 分支（含 api-tests/ 路径变更）
+#   - Pull Request 到 main
+#   - 手动触发（可选 staging/production 环境）
+#
+# 流水线步骤:
+#   1. Checkout → 2. ApifoxCLI安装 → 3. 执行测试套件
+#   4. 质量门禁判定 → 5. 上传报告 → 6. 部署Pages → 7. Webhook告警
+# ============================================================
+
+name: 🧪 Apifox API Test Suite
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'api-tests/**'
+      - '.github/workflows/apifox-api-test.yml'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      test_environment:
+        description: '测试环境'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: 'staging'
+
+env:
+  APIFOX_ACCESS_TOKEN: ${{ secrets.APIFOX_ACCESS_TOKEN }}
+  APIFOX_PROJECT_ID: ${{ secrets.APIFOX_PROJECT_ID }}
+
+jobs:
+  api-test:
+    name: Run Apifox API Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # ========================================
+      # Step 1: 检出代码
+      # ========================================
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      # ========================================
+      # Step 2: Node.js 环境
+      # ========================================
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ========================================
+      # Step 3: 安装 Apifox CLI
+      # ========================================
+      - name: 📦 Install Apifox CLI
+        run: |
+          npm install -g apifox-cli@latest
+          apifox --version
+          echo "✅ Apifox CLI installed"
+
+      # ========================================
+      # Step 4: 执行接口测试
+      # ========================================
+      - name: 🧪 Run API Tests
+        id: run_tests
+        run: |
+          ENV_FILE="./api-tests/environments/${{ github.event.inputs.test_environment || 'staging' }}.json"
+
+          apifox run \
+            --collection "./api-tests/collections/SwagLabs-API-Test-Suite.json" \
+            --environment "${ENV_FILE}" \
+            --report-format "json,junit,html" \
+            --report-dir "./api-tests/reports/" \
+            --timeout 30000 \
+            --retry 2 \
+            --concurrency 3 \
+            2>&1 | tee ./api-tests/reports/apifox-output.log
+
+          APIFOX_EXIT_CODE=${PIPESTATUS[0]}
+          echo "apifox_exit_code=$APIFOX_EXIT_CODE" >> $GITHUB_OUTPUT
+
+          if [ $APIFOX_EXIT_CODE -eq 0 ]; then
+            echo "✅ All API tests passed"
+          else
+            echo "❌ API tests failed (exit: $APIFOX_EXIT_CODE)"
+          fi
+
+      # ========================================
+      # Step 5: 质量门禁判定
+      # ========================================
+      - name: 🚦 Quality Gate
+        id: quality_gate
+        if: always() && steps.run_tests.outcome != 'skipped'
+        run: |
+          echo "========================================="
+          echo "  质量门禁 (Quality Gate) 判定"
+          echo "========================================="
+
+          REPORT_FILE="./api-tests/reports/junit-report.xml"
+
+          if [ ! -f "$REPORT_FILE" ]; then
+            echo "❌ 未找到测试报告文件"
+            exit 1
+          fi
+
+          TOTAL=$(grep -oP 'tests="\K\d+' "$REPORT_FILE" | head -1)
+          FAILURES=$(grep -oP 'failures="\K\d+' "$REPORT_FILE" | head -1)
+          ERRORS=$(grep -oP 'errors="\K\d+' "$REPORT_FILE" | head -1)
+
+          PASSED=$((TOTAL - FAILURES - ERRORS))
+          PASS_RATE=$(awk "BEGIN {printf \"%.2f\", ($PASSED/$TOTAL)*100}")
+
+          echo "  Total     : $TOTAL"
+          echo "  Passed    : $PASSED"
+          echo "  Failed    : $FAILURES"
+          echo "  Errors    : $ERRORS"
+          echo "  Pass Rate : $PASS_RATE%"
+
+          # P0 核心接口检测
+          CORE_TOTAL=$(grep -c '@P0' "$REPORT_FILE" 2>/dev/null || echo 0)
+          CORE_FAILURES=$(grep '@P0' "$REPORT_FILE" 2>/dev/null | grep -c 'failure' || echo 0)
+          echo "  P0 Core   : $CORE_TOTAL total, $CORE_FAILURES failed"
+
+          GATE_PASS=true
+
+          # 规则1: P0 接口 100% 通过
+          if [ "$CORE_FAILURES" -gt 0 ]; then
+            echo "🚫 Rule 1 FAIL: P0 core interfaces have failures ($CORE_FAILURES)"
+            GATE_PASS=false
+          else
+            echo "✅ Rule 1 PASS: All P0 core interfaces passed"
+          fi
+
+          # 规则2: 整体通过率 >= 95%
+          if (( $(echo "$PASS_RATE < 95" | bc -l) )); then
+            echo "🚫 Rule 2 FAIL: Overall pass rate $PASS_RATE% < 95%"
+            GATE_PASS=false
+          else
+            echo "✅ Rule 2 PASS: Overall pass rate $PASS_RATE% >= 95%"
+          fi
+
+          # 规则3: 无 500 服务端错误
+          SERVER_ERRORS=$(grep -c '500\|Internal Server Error' ./api-tests/reports/apifox-output.log 2>/dev/null || echo 0)
+          if [ "$SERVER_ERRORS" -gt 0 ]; then
+            echo "🚫 Rule 3 FAIL: $SERVER_ERRORS server 500 error(s)"
+            GATE_PASS=false
+          else
+            echo "✅ Rule 3 PASS: No server 500 errors"
+          fi
+
+          echo "========================================="
+          if [ "$GATE_PASS" = true ]; then
+            echo "✅ Quality Gate: PASSED"
+            echo "quality_gate=passed" >> $GITHUB_OUTPUT
+          else
+            echo "🚫 Quality Gate: FAILED — pipeline blocked"
+            echo "quality_gate=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      # ========================================
+      # Step 6: 上传测试报告
+      # ========================================
+      - name: 📤 Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apifox-api-test-report
+          path: |
+            ./api-tests/reports/
+            !./api-tests/reports/*.log
+          retention-days: 30
+
+      # ========================================
+      # Step 7: 部署报告到 GitHub Pages
+      # ========================================
+      - name: 🚀 Deploy Report to Pages
+        if: always()
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./api-tests/reports/
+          destination_dir: api-test-reports
+          keep_files: true
+
+  # ========================================
+  # 告警通知（独立 Job）
+  # ========================================
+  notify:
+    name: Send Alert
+    needs: api-test
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: 📬 Send to Feishu/DingTalk
+        uses: distributhor/workflow-webhook@v3
+        with:
+          webhook_url: ${{ secrets.WEBHOOK_URL }}
+          webhook_type: 'feishu'
+          data: |
+            {
+              "msg_type": "interactive",
+              "card": {
+                "header": {
+                  "title": {
+                    "tag": "plain_text",
+                    "content": "🧪 API Test - ${{ needs.api-test.result }}"
+                  },
+                  "template": "${{ needs.api-test.result == 'success' && 'green' || 'red' }}"
+                },
+                "elements": [
+                  {
+                    "tag": "markdown",
+                    "content": "**Project**: Swag Labs API Test\n**Branch**: ${{ github.ref_name }}\n**Commit**: ${{ github.sha }}\n**Actor**: ${{ github.actor }}\n**Quality Gate**: ${{ needs.api-test.outputs.quality_gate }}\n**Report**: [View](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+                  }
+                ]
+              }
+            }

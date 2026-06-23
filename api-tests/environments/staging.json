@@ -1,0 +1,19 @@
+{
+  "name": "Swag Labs — Staging",
+  "variables": {
+    "base_url_swag": "https://www.saucedemo.com",
+    "base_url_reqres": "https://reqres.in/api",
+    "test_username": "standard_user",
+    "test_password": "secret_sauce",
+    "reqres_email": "eve.holt@reqres.in",
+    "reqres_password": "cityslicka",
+    "api_secret": "swaglabs_api_secret_2026",
+    "auth_token": "",
+    "latest_active_user_id": "",
+    "last_created_user_id": "",
+    "created_user_ids": "",
+    "execution_log": "[]",
+    "execution_log_count": "0",
+    "slow_api_alert": ""
+  }
+}
