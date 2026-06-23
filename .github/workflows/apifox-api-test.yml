@@ -130,6 +130,13 @@ jobs:
           FAILURES=$(grep -oP 'failures="\K\d+' "$REPORT_FILE" | head -1)
           ERRORS=$(grep -oP 'errors="\K\d+' "$REPORT_FILE" | head -1)
 
+          # 0 条用例时（如 Apifox 凭证未配置）跳过门禁判定
+          if [ "$TOTAL" -eq 0 ]; then
+            echo "  ⚠️  测试用例数为 0，跳过质量门禁（可能 Apifox 凭证未配置）"
+            echo "quality_gate=skipped" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           PASSED=$((TOTAL - FAILURES - ERRORS))
           PASS_RATE=$(awk "BEGIN {printf \"%.2f\", ($PASSED/$TOTAL)*100}")
 
