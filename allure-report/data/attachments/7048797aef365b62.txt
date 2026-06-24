@@ -1,0 +1,19 @@
+2026-06-24 16:02:52 | INFO     | testcases.conftest | 
+============================================================
+  Swag Labs 自动化测试启动
+  Base URL : https://www.saucedemo.com/
+  Browser  : chrome
+  Headless : True
+============================================================
+2026-06-24 16:02:52 | INFO     | testcases.conftest | --- 创建 WebDriver (function scope) ---
+2026-06-24 16:02:52 | INFO     | utils.driver_factory | 图片加载已启用（UI 视觉模式）
+2026-06-24 16:03:03 | INFO     | utils.driver_factory | WebDriver 初始化完成 | browser=chrome | headless=True | implicit_wait=10s | page_timeout=60s | script_timeout=10s
+2026-06-24 16:03:03 | INFO     | pages.base_page | 🌐 打开页面: https://www.saucedemo.com/
+2026-06-24 16:03:05 | INFO     | pages.base_page | ⌨ 输入文本: ('id', 'user-name') → «standard_user»
+2026-06-24 16:03:05 | INFO     | pages.base_page | ⌨ 输入文本: ('id', 'password') → «secret_sauce»
+2026-06-24 16:03:05 | INFO     | pages.base_page | 🖱 点击元素: ('id', 'login-button')
+2026-06-24 16:03:05 | INFO     | pages.base_page | 🖱 点击元素: ('id', 'react-burger-menu-btn')
+2026-06-24 16:03:06 | INFO     | pages.base_page | 🖱 点击元素: ('id', 'reset_sidebar_link')
+2026-06-24 16:03:06 | INFO     | pages.base_page | 🖱 点击元素: ('css selector', 'button[data-test="add-to-cart-sauce-labs-backpack"]')
+2026-06-24 16:03:16 | INFO     | testcases.conftest | 失败截图已保存: /home/runner/work/SwagLabs-Pytest-Selenium/SwagLabs-Pytest-Selenium/automation/reports/screenshots/FAIL_testcases_test_checkout.py_test_multi_item_add_to_cart_badge_sync_20260624_160316.png
+2026-06-24 16:03:16 | INFO     | testcases.conftest | --- 销毁 WebDriver ---

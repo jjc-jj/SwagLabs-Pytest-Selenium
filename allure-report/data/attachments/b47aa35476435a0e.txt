@@ -1,0 +1,9 @@
+2026-06-24 16:03:59 | INFO     | testcases.conftest | --- 创建 WebDriver (function scope) ---
+2026-06-24 16:03:59 | INFO     | utils.driver_factory | 图片加载已启用（UI 视觉模式）
+2026-06-24 16:04:00 | INFO     | utils.driver_factory | WebDriver 初始化完成 | browser=chrome | headless=True | implicit_wait=10s | page_timeout=60s | script_timeout=10s
+2026-06-24 16:04:00 | INFO     | pages.base_page | 🌐 打开页面: https://www.saucedemo.com/
+2026-06-24 16:04:00 | INFO     | pages.base_page | ⌨ 输入文本: ('id', 'user-name') → «standard_user»
+2026-06-24 16:04:00 | INFO     | pages.base_page | ⌨ 输入文本: ('id', 'password') → «secret_sauce»
+2026-06-24 16:04:00 | INFO     | pages.base_page | 🖱 点击元素: ('id', 'login-button')
+2026-06-24 16:04:00 | INFO     | pages.inventory_page | 🔽 排序方式: za
+2026-06-24 16:04:00 | INFO     | testcases.conftest | --- 销毁 WebDriver ---

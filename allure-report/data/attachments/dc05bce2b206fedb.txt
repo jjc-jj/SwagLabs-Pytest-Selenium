@@ -1,0 +1,12 @@
+INFO     testcases.conftest:conftest.py:103 --- 创建 WebDriver (function scope) ---
+INFO     utils.driver_factory:driver_factory.py:427 图片加载已启用（UI 视觉模式）
+INFO     utils.driver_factory:driver_factory.py:368 WebDriver 初始化完成 | browser=chrome | headless=True | implicit_wait=10s | page_timeout=60s | script_timeout=10s
+INFO     pages.base_page:base_page.py:97 🌐 打开页面: https://www.saucedemo.com/
+INFO     pages.base_page:base_page.py:282 ⌨ 输入文本: ('id', 'user-name') → «standard_user»
+INFO     pages.base_page:base_page.py:282 ⌨ 输入文本: ('id', 'password') → «secret_sauce»
+INFO     pages.base_page:base_page.py:253 🖱 点击元素: ('id', 'login-button')
+INFO     pages.base_page:base_page.py:253 🖱 点击元素: ('id', 'react-burger-menu-btn')
+INFO     pages.base_page:base_page.py:253 🖱 点击元素: ('id', 'reset_sidebar_link')
+INFO     pages.base_page:base_page.py:253 🖱 点击元素: ('css selector', 'button[data-test="add-to-cart-sauce-labs-fleece-jacket"]')
+INFO     pages.base_page:base_page.py:253 🖱 点击元素: ('css selector', 'button[data-test="add-to-cart-sauce-labs-onesie"]')
+INFO     testcases.conftest:conftest.py:108 --- 销毁 WebDriver ---
